@@ -11,6 +11,7 @@
 package goexpress
 
 import (
+	"fmt"
 	http "net/http"
 	"strings"
 
@@ -66,9 +67,7 @@ func (e *express) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 				// done handling
 				if executedRoutes == 0 {
 					// 404
-					response.Header.SetStatus(404)
-					response.Writef("Cannot %s %s", strings.ToUpper(req.Method), req.URL)
-					response.End()
+					response.Error(404, fmt.Sprintf("Cannot %s %s", strings.ToUpper(req.Method), req.URL))
 					return
 				} else {
 					// should close connection
