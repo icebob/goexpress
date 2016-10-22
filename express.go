@@ -13,6 +13,8 @@ package goexpress
 import (
 	http "net/http"
 
+	"strconv"
+
 	request "github.com/icebob/goexpress/request"
 	response "github.com/icebob/goexpress/response"
 	router "github.com/icebob/goexpress/router"
@@ -140,18 +142,18 @@ func (e *express) GetProp(key string, value interface{}) interface{} {
 }
 
 // Starts the App Server
-func (e *express) Start(port string) *express {
+func (e *express) Start(port int) error {
 	return e.Listen(port, "0.0.0.0")
 }
 
 // Start listening
-func (e *express) Listen(port string, ip string) *express {
+func (e *express) Listen(port int, ip string) error {
 	if e.started {
-		return e
+		return nil
 	}
-	err := http.ListenAndServe(ip+":"+port, e)
+	err := http.ListenAndServe(ip+":"+strconv.Itoa(port), e)
 	if err != nil {
 		e.started = true
 	}
-	return e
+	return err
 }
