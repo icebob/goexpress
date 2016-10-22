@@ -46,14 +46,10 @@ func (res *Response) AddCookie(key string, value string) {
 	res.Header.AppendCookie(key, value)
 }
 
-func (res *Response) Writef(format string, v ...interface{}) *Response {
-	str := fmt.Sprintf(format, v...)
-	return res.Write(str)
-}
-
 // Writes a string content to the buffer and immediately flushes the same
-func (res *Response) Write(content string) *Response {
+func (res *Response) WriteChunk(content string) *Response {
 	if res.Header.BasicSent() == false && res.Header.CanSendHeader() == true {
+		res.Header.TranferChunks()
 		res.Cookie.Finish()
 		if sent := res.Header.FlushHeaders(); sent == false {
 			log.Panic("Failed to push headers")
@@ -68,28 +64,34 @@ func (res *Response) Write(content string) *Response {
 	return res
 }
 
+func (res *Response) Send(content string) *Response {
+	res.sendContent(200, "text/html; charset=utf-8", []byte(content))
+	return res
+}
+
 func (res *Response) sendContent(status int, content_type string, content []byte) {
 	if res.Header.BasicSent() == false {
 		res.Header.SetStatus(status)
 	}
 	if res.Header.CanSendHeader() == true {
 		res.Header.Set("Content-Type", content_type)
+		res.Header.SetLength(len(content))
 		res.Cookie.Finish()
 		if sent := res.Header.FlushHeaders(); sent == false {
 			log.Panic("Failed to write headers")
 		}
 	}
-	var chunkSize = fmt.Sprintf("%x", len(content))
-	res.writer.WriteString(chunkSize + "\r\n")
 	res.writer.Write(content)
-	res.writer.WriteString("\r\n")
 	res.writer.Writer.Flush()
 	res.End()
 }
 
 // Ends a response and drops the connection with client
 func (res *Response) End() {
-	res.writer.WriteString("0\r\n\r\n")
+	if res.Header.IsTranferChunks() {
+		res.writer.WriteString("0")
+	}
+	res.writer.WriteString("\r\n\r\n")
 	res.writer.Flush()
 	err := res.connection.Close()
 	res.ended = true
@@ -103,7 +105,6 @@ func (res *Response) Redirect(url string) *Response {
 	res.Header.SetStatus(301)
 	res.Header.Set("Location", url)
 	res.Header.FlushHeaders()
-	res.ended = true
 	res.End()
 	return res
 }

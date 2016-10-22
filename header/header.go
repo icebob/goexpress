@@ -9,19 +9,21 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // Header Struct
 type Header struct {
-	response   http.ResponseWriter
-	request    *http.Request
-	writer     *bufio.ReadWriter
-	bodySent   bool
-	basicSent  bool
-	hasLength  bool
-	StatusCode int
-	ProtoMajor int
-	ProtoMinor int
+	response       http.ResponseWriter
+	request        *http.Request
+	writer         *bufio.ReadWriter
+	bodySent       bool
+	basicSent      bool
+	transferChunks bool
+	hasLength      bool
+	StatusCode     int
+	ProtoMajor     int
+	ProtoMinor     int
 }
 
 var statusCodeMap = map[int]string{
@@ -60,6 +62,7 @@ func (h *Header) Init(response http.ResponseWriter, request *http.Request, write
 	h.writer = writer
 	h.bodySent = false
 	h.basicSent = false
+	h.transferChunks = false
 	h.ProtoMinor = 1
 	h.ProtoMajor = 1
 	return h
@@ -83,9 +86,18 @@ func (h *Header) Del(key string) *Header {
 }
 
 // todo: Add non-chunk response functionality
-func (h *Header) SetLength(length *int) {
-	h.response.Header().Set("Content-Length", strconv.Itoa(*length))
+func (h *Header) SetLength(length int) {
+	h.response.Header().Set("Content-Length", strconv.Itoa(length))
 	h.hasLength = true
+}
+
+// todo: Add chunk response functionality
+func (h *Header) TranferChunks() {
+	h.transferChunks = true
+}
+
+func (h *Header) IsTranferChunks() bool {
+	return h.transferChunks
 }
 
 // Flushes Headers
@@ -104,8 +116,11 @@ func (h *Header) FlushHeaders() bool {
 		if err := h.response.Header().Write(h.writer); err != nil {
 			return false
 		} else {
-			var chunkSize = fmt.Sprintf("%x", 0)
-			h.writer.WriteString(chunkSize + "\r\n" + "\r\n")
+			if h.IsTranferChunks() {
+				var chunkSize = fmt.Sprintf("%x", 0)
+				h.writer.WriteString(chunkSize + "\r\n")
+			}
+			h.writer.WriteString("\r\n")
 			h.writer.Writer.Flush()
 			return true
 		}
@@ -143,12 +158,17 @@ func (h *Header) SetStatus(code int) {
 	h.StatusCode = code
 }
 
+const TimeFormat = "Mon, 02 Jan 2006 15:04:05 GMT"
+
 func (h *Header) sendBasics() {
 	if h.StatusCode == 0 {
 		h.StatusCode = 200
 	}
 	fmt.Fprintf(h.writer, "HTTP/%d.%d %03d %s\r\n", h.ProtoMajor, h.ProtoMinor, h.StatusCode, statusCodeMap[h.StatusCode])
-	h.Set("transfer-encoding", "chunked")
-	h.Set("connection", "keep-alive")
+	h.Set("Date", time.Now().UTC().Format(time.RFC1123))
+	h.Set("Connection", "keep-alive")
+	if h.transferChunks {
+		h.Set("Transfer-Encoding", "chunked")
+	}
 	h.basicSent = true
 }
