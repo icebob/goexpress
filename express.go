@@ -12,6 +12,7 @@ package goexpress
 
 import (
 	http "net/http"
+	"strings"
 
 	"strconv"
 
@@ -66,7 +67,7 @@ func (e *express) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 				if executedRoutes == 0 {
 					// 404
 					response.Header.SetStatus(404)
-					response.Write("Not Found")
+					response.Writef("Cannot %s %s", strings.ToUpper(req.Method), req.URL)
 					response.End()
 					return
 				} else {
