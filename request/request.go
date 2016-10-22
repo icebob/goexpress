@@ -4,48 +4,48 @@
 package request
 
 import (
-	"log"
-	"net/http"
-	"mime/multipart"
+	"encoding/json"
 	"io"
+	"mime/multipart"
+	"net/http"
 	"net/url"
 	"strings"
-	"encoding/json"
-	cookie "github.com/DronRathore/goexpress/cookie"
+
+	cookie "github.com/icebob/goexpress/cookie"
 )
 
-type Url struct{
+type Url struct {
 	Username string
 	Password string
-	Url string
-	Path string
+	Url      string
+	Path     string
 	Fragment string
 }
 
 // Contains the reader to read the buffer content of
 // uploading file
-type File struct{
-	Name string
+type File struct {
+	Name     string
 	FormName string
-	Reader *multipart.Part
+	Reader   *multipart.Part
 }
 
 // Request Structure
-type Request struct{
-	ref *http.Request
+type Request struct {
+	ref        *http.Request
 	fileReader *multipart.Reader
-	Header map[string]string
-	Method string
-	URL string
-	_url *url.URL
-	Params map[string]string // a map to be filled by router
-	Query map[string][]string
-	Body map[string][]string
-	Cookies *cookie.Cookie
-	JSON *json.Decoder
+	Header     map[string]string
+	Method     string
+	URL        string
+	_url       *url.URL
+	Params     map[string]string // a map to be filled by router
+	Query      map[string][]string
+	Body       map[string][]string
+	Cookies    *cookie.Cookie
+	JSON       *json.Decoder
 }
 
-func (req *Request) Init(request *http.Request) *Request{
+func (req *Request) Init(request *http.Request) *Request {
 	req.Header = make(map[string]string)
 	req.Body = make(map[string][]string)
 	req.Body = request.Form
@@ -78,12 +78,12 @@ func (req *Request) Init(request *http.Request) *Request{
 // 	req._url.RawQuery
 
 // Returns the URL structure
-func(req *Request) GetUrl() *url.URL {
+func (req *Request) GetUrl() *url.URL {
 	return req._url
 }
 
 // Helper that returns original raw http.Request object
-func (req *Request) GetRaw() *http.Request{
+func (req *Request) GetRaw() *http.Request {
 	return req.ref
 }
 
