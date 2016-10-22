@@ -2,25 +2,26 @@
 // The package is responsible for setting Response headers
 // and pushing the same on the transport buffer
 package header
+
 import (
-	"net/http"
 	"bufio"
 	"fmt"
-	"strconv"
 	"log"
+	"net/http"
+	"strconv"
 )
 
 // Header Struct
-type Header struct{
-	response	http.ResponseWriter
-	request		*http.Request
-	writer *bufio.ReadWriter
-	bodySent	bool
-	basicSent	bool
-	hasLength	bool
-	StatusCode	int
-	ProtoMajor	int
-	ProtoMinor	int
+type Header struct {
+	response   http.ResponseWriter
+	request    *http.Request
+	writer     *bufio.ReadWriter
+	bodySent   bool
+	basicSent  bool
+	hasLength  bool
+	StatusCode int
+	ProtoMajor int
+	ProtoMinor int
 }
 
 var statusCodeMap = map[int]string{
@@ -53,7 +54,7 @@ var statusCodeMap = map[int]string{
 }
 
 // Initialise with response, request and io buffer
-func (h *Header) Init(response http.ResponseWriter, request *http.Request, writer *bufio.ReadWriter) *Header{
+func (h *Header) Init(response http.ResponseWriter, request *http.Request, writer *bufio.ReadWriter) *Header {
 	h.response = response
 	h.request = request
 	h.writer = writer
@@ -65,42 +66,42 @@ func (h *Header) Init(response http.ResponseWriter, request *http.Request, write
 }
 
 // Sets a header
-func (h *Header) Set(key string, value string) *Header{
+func (h *Header) Set(key string, value string) *Header {
 	h.response.Header().Set(key, value)
 	return h
 }
 
 // Returns the header
-func (h *Header) Get(key string) (string) {
+func (h *Header) Get(key string) string {
 	return h.response.Header().Get(key)
 }
 
 // Deletes a Header
-func (h *Header) Del(key string) *Header{
+func (h *Header) Del(key string) *Header {
 	h.response.Header().Del(key)
 	return h
 }
 
 // todo: Add non-chunk response functionality
-func (h *Header) SetLength(length *int){
+func (h *Header) SetLength(length *int) {
 	h.response.Header().Set("Content-Length", strconv.Itoa(*length))
 	h.hasLength = true
 }
 
 // Flushes Headers
-func (h *Header) FlushHeaders() bool{
+func (h *Header) FlushHeaders() bool {
 	if h.bodySent == true {
 		log.Panic("Cannot send headers in middle of body")
 		return false
 	} else {
-		if h.basicSent == false{
+		if h.basicSent == false {
 			h.sendBasics()
 		}
 		// write the latest headers
 		if h.Get("Content-Type") == "" {
-			h.Set("Content-Type", "text/html")
+			h.Set("Content-Type", "text/html; charset=utf-8")
 		}
-		if err := h.response.Header().Write(h.writer); err!=nil {
+		if err := h.response.Header().Write(h.writer); err != nil {
 			return false
 		} else {
 			var chunkSize = fmt.Sprintf("%x", 0)
@@ -114,7 +115,7 @@ func (h *Header) FlushHeaders() bool{
 // An internal helper function to set Cookie Header
 func (h *Header) AppendCookie(key string, value string) {
 	if h.Get(key) != "" {
-		h.Set(key, h.Get(key) + ";" + value)
+		h.Set(key, h.Get(key)+";"+value)
 	} else {
 		h.Set(key, value)
 	}
@@ -138,11 +139,11 @@ func (h *Header) CanSendHeader() bool {
 }
 
 // Sets the HTTP Status of the Request
-func (h *Header) SetStatus(code int){
+func (h *Header) SetStatus(code int) {
 	h.StatusCode = code
 }
 
-func (h *Header) sendBasics(){
+func (h *Header) sendBasics() {
 	if h.StatusCode == 0 {
 		h.StatusCode = 200
 	}
