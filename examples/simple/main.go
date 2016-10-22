@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	express "github.com/icebob/goexpress"
 	"github.com/icebob/goexpress/request"
@@ -21,7 +22,9 @@ func main() {
 	})
 
 	app.Get("/", func(req *request.Request, res *response.Response, next func()) {
-		res.Write("Hello World")
+		res.Write("Hello World\n")
+		time.Sleep(5 * time.Second)
+		res.Write("Hello World2\n")
 		// you can skip closing connection
 	})
 
