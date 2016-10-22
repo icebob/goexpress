@@ -10,20 +10,22 @@ import (
 	"net"
 	"net/http"
 
-	cookie "github.com/icebob/goexpress/cookie"
-	header "github.com/icebob/goexpress/header"
+	"github.com/icebob/goexpress/cookie"
+	"github.com/icebob/goexpress/header"
 )
 
 // Response Structure extends basic http.ResponseWriter interface
 // It encapsulates Header and Cookie class for direct access
 type Response struct {
-	response   http.ResponseWriter
-	Header     *header.Header
-	Cookie     *cookie.Cookie
-	Locals     map[string]interface{}
-	writer     *bufio.ReadWriter
-	connection net.Conn
-	ended      bool
+	response          http.ResponseWriter
+	Header            *header.Header
+	Cookie            *cookie.Cookie
+	Locals            map[string]interface{}
+	Props             map[string]interface{}
+	writer            *bufio.ReadWriter
+	connection        net.Conn
+	ended             bool
+	finishedListeners []func()
 }
 
 // Intialise the Response Struct, requires the Hijacked buffer,
@@ -37,13 +39,27 @@ func (res *Response) Init(rs http.ResponseWriter, r *http.Request, w *bufio.Read
 	res.Cookie = &cookie.Cookie{}
 	res.Cookie.Init(res, r)
 	res.Locals = make(map[string]interface{})
+	res.Props = make(map[string]interface{})
 	res.ended = false
+	//res.finishedListeners = make([]func())
 	return res
 }
 
 // This function is for internal Use by Cookie Struct
 func (res *Response) AddCookie(key string, value string) {
 	res.Header.AppendCookie(key, value)
+}
+
+func (res *Response) AddFinishedListener(callback func()) {
+	res.finishedListeners = append(res.finishedListeners, callback)
+}
+
+func (res *Response) SetProp(key string, value interface{}) {
+	res.Props[key] = value
+}
+
+func (res *Response) GetProp(key string) interface{} {
+	return res.Props[key]
 }
 
 // Writes a string content to the buffer and immediately flushes the same
@@ -98,6 +114,12 @@ func (res *Response) End() {
 	if err != nil {
 		log.Panic("Couldn't close the connection, already lost?")
 	}
+
+	for _, cb := range res.finishedListeners {
+		cb()
+	}
+
+	res.finishedListeners = res.finishedListeners[:0]
 }
 
 // Redirects a request, takes the url as the Location
