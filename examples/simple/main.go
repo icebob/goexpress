@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
-	express "github.com/icebob/goexpress"
-	logger "github.com/icebob/goexpress/middlewares/log"
+	"github.com/icebob/goexpress"
+	"github.com/icebob/goexpress/middlewares"
 	"github.com/icebob/goexpress/request"
 	"github.com/icebob/goexpress/response"
 )
@@ -12,9 +12,9 @@ import (
 func main() {
 	//runtime.GOMAXPROCS(8)
 
-	var app = express.Express()
+	var app = goexpress.Express()
 
-	app.Use(logger.Simple)
+	app.Use(middlewares.Log(middlewares.LOGTYPE_DEV))
 
 	app.Get("/test", func(req *request.Request, res *response.Response, next func()) {
 		res.Send("Hello Test")
@@ -32,7 +32,7 @@ func main() {
 
 	bindAddress, bindPort := "127.0.0.1", 3000
 	//bindAddress, bindPort := "0.0.0.0", 3000
-	log.Printf("Listening at %s:%d...\n", bindAddress, bindPort)
+	fmt.Printf("Listening at %s:%d...\n", bindAddress, bindPort)
 	err := app.Listen(bindPort, bindAddress)
 	if err != nil {
 		panic(err)
