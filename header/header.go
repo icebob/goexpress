@@ -24,6 +24,7 @@ type Header struct {
 	ProtoMajor     int
 	ProtoMinor     int
 	Length         int
+	listeners      []func()
 }
 
 var statusCodeMap = map[int]string{
@@ -86,12 +87,16 @@ func (h *Header) Del(key string) *Header {
 	return h
 }
 
-// todo: Add non-chunk response functionality
+func (h *Header) AddListener(callback func()) {
+	h.listeners = append(h.listeners, callback)
+}
+
+// Add non-chunk response functionality
 func (h *Header) SetLength(length int) {
 	h.Length = length
 }
 
-// todo: Add chunk response functionality
+// Add chunk response functionality
 func (h *Header) TranferChunks() {
 	h.transferChunks = true
 }
@@ -106,6 +111,16 @@ func (h *Header) FlushHeaders() bool {
 		log.Panic("Cannot send headers in middle of body")
 		return false
 	} else {
+
+		// Call finishedListeners
+		for _, cb := range h.listeners {
+			cb()
+		}
+
+		// Clear listeners
+		h.listeners = h.listeners[:0]
+
+		// Send basic headers
 		if h.basicSent == false {
 			h.sendBasics()
 		}

@@ -41,7 +41,7 @@ func (res *Response) Init(rs http.ResponseWriter, r *http.Request, w *bufio.Read
 	res.Locals = make(map[string]interface{})
 	res.Props = make(map[string]interface{})
 	res.ended = false
-	//res.finishedListeners = make([]func())
+
 	return res
 }
 
@@ -52,6 +52,10 @@ func (res *Response) AddCookie(key string, value string) {
 
 func (res *Response) AddFinishedListener(callback func()) {
 	res.finishedListeners = append(res.finishedListeners, callback)
+}
+
+func (res *Response) AddHeaderListener(callback func()) {
+	res.Header.AddListener(callback)
 }
 
 func (res *Response) SetProp(key string, value interface{}) {
@@ -115,10 +119,12 @@ func (res *Response) End() {
 		log.Panic("Couldn't close the connection, already lost?")
 	}
 
+	// Call finishedListeners
 	for _, cb := range res.finishedListeners {
 		cb()
 	}
 
+	// Clear listeners
 	res.finishedListeners = res.finishedListeners[:0]
 }
 
