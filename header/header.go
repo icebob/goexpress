@@ -20,10 +20,10 @@ type Header struct {
 	bodySent       bool
 	basicSent      bool
 	transferChunks bool
-	hasLength      bool
 	StatusCode     int
 	ProtoMajor     int
 	ProtoMinor     int
+	Length         int
 }
 
 var statusCodeMap = map[int]string{
@@ -65,6 +65,7 @@ func (h *Header) Init(response http.ResponseWriter, request *http.Request, write
 	h.transferChunks = false
 	h.ProtoMinor = 1
 	h.ProtoMajor = 1
+	h.Length = 0
 	return h
 }
 
@@ -87,8 +88,7 @@ func (h *Header) Del(key string) *Header {
 
 // todo: Add non-chunk response functionality
 func (h *Header) SetLength(length int) {
-	h.response.Header().Set("Content-Length", strconv.Itoa(length))
-	h.hasLength = true
+	h.Length = length
 }
 
 // todo: Add chunk response functionality
@@ -169,6 +169,8 @@ func (h *Header) sendBasics() {
 	h.Set("Connection", "keep-alive")
 	if h.transferChunks {
 		h.Set("Transfer-Encoding", "chunked")
+	} else {
+		h.Set("Content-Length", strconv.Itoa(h.Length))
 	}
 	h.basicSent = true
 }
