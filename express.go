@@ -28,7 +28,7 @@ type express struct {
 	properties map[string]interface{}
 }
 
-// Returns a new instance of express
+// Express returns a new instance of express
 func Express() *express {
 	var exp = &express{}
 	exp.router = &router.Router{}

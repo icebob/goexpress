@@ -46,6 +46,7 @@ type Request struct {
 }
 
 func (req *Request) Init(request *http.Request) *Request {
+	req.ref = request
 	req.Header = make(map[string]string)
 	req.Body = make(map[string][]string)
 	req.Body = request.Form

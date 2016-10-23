@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"io"
 	"net/http"
@@ -14,3 +15,4 @@ func main() {
 	http.HandleFunc("/", hello)
 	http.ListenAndServe("0.0.0.0:3001", nil)
 }
+*/
