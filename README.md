@@ -7,6 +7,7 @@ Original code: https://github.com/DronRathore/goexpress
 ## Hello World
 ```go
 package main
+
 import (
   "github.com/icebob/goexpress"
 	"github.com/icebob/goexpress/middlewares"
@@ -14,7 +15,7 @@ import (
   "github.com/icebob/goexpress/response"
 )
 
-func main (){
+func main() {
   var app = goexpress.Express()
 
 	app.Use(middlewares.Log(middlewares.LOGTYPE_DEV))
@@ -26,10 +27,11 @@ func main (){
   app.Listen("8080", "0.0.0.0")
 }
 ```
+
 ## Router
 The router works in the similar way as it does in the express-js. You can have named parameters in the URL or named + regex combo.
 ```go
-func main (){
+func main() {
   var app = goexpress.Express()
   app.Get("/:service/:object([0-9]+)", func(req *request.Request, res *response.Response, next func()){
     res.JSON(req.Params)
@@ -37,10 +39,11 @@ func main (){
   app.Listen("8080", "0.0.0.0")
 }
 ```
+
 ## Middleware
 You can write custom middlewares, wrappers in the similar fashion. Middlewares can be used to add websocket upgradation lib, session handling lib, static assets server handler
 ```go
-func main (){
+func main() {
   var app = goexpress.Express()
   app.Use(func(req *request.Request, res *response.Response, next func()){
     req.Params["I-Am-Adding-Something"] = "something"
@@ -52,8 +55,8 @@ func main (){
   })
   app.Listen("8080", "0.0.0.0")
 }
-}
 ```
+
 ## Cookies
 ```go
 import (
@@ -63,7 +66,7 @@ import (
   http "net/http"
   Time "time"
 )
-func main (){
+func main() {
   var app = goexpress.Express()
   app.Use(func(req *request.Request, res *response.Response, next func()){
     var cookie = &http.Cookie{
@@ -79,11 +82,11 @@ func main (){
   })
   app.Listen("8080", "0.0.0.0")
 }
-}
 ```
+
 ## Post Body
 ```go
-func main (){
+func main() {
   var app = goexpress.Express()
   app.Use(func(req *request.Request, res *response.Response, next func()){
     res.Params["I-Am-Adding-Something"] = "something"
@@ -99,13 +102,12 @@ func main (){
   })
   app.Listen("8080", "0.0.0.0")
 }
-}
 ```
 
 ## JSON Post
 JSON Post data manipulation in golang is slightly different from JS. You have to pass a filler to the decoder, the decoder assumes the data to be in the same format as the filler, if it is not, it throws an error.
 ```go
-func main (){
+func main() {
   var app = goexpress.Express()
   app.Use(func(req *request.Request, res *response.Response, next func()){
     res.Params["I-Am-Adding-Something"] = "something"
@@ -125,7 +127,6 @@ func main (){
 		}
   })
   app.Listen("8080", "0.0.0.0")
-}
 }
 ```
 
