@@ -173,8 +173,6 @@ func (h *Header) SetStatus(code int) {
 	h.StatusCode = code
 }
 
-const TimeFormat = "Mon, 02 Jan 2006 15:04:05 GMT"
-
 func (h *Header) sendBasics() {
 	if h.StatusCode == 0 {
 		h.StatusCode = 200
