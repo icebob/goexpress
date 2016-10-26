@@ -40,58 +40,49 @@ func Express() *express {
 // ServeHTTP
 // Default function to handle HTTP request
 func (e *express) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	hijack, ok := res.(http.Hijacker)
-	if !ok {
-		http.Error(res, "Request Hijacking not supported for this request", http.StatusInternalServerError)
-	} else {
-		conn, bufrw, err := hijack.Hijack()
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+	var response = &response.Response{}
+	var request = &request.Request{}
+	request.Init(req)
+	response.Init(res, req)
+	var index = 0
+	var executedRoutes = 0
+	var next func()
+	var _next router.NextFunc
+	_next = func(n router.NextFunc) {
+		if response.HasEnded() == true {
+			// we are done
 			return
 		}
-		var response = &response.Response{}
-		var request = &request.Request{}
-		request.Init(req)
-		response.Init(res, req, bufrw, conn)
-		var index = 0
-		var executedRoutes = 0
-		var next func()
-		var _next router.NextFunc
-		_next = func(n router.NextFunc) {
-			if response.HasEnded() == true {
-				// we are done
+		var handler, i, isMiddleware = e.router.FindNext(index, request.Method, request.URL, request)
+		if i == -1 {
+			// done handling
+			if executedRoutes == 0 {
+				// 404
+				response.Error(404, fmt.Sprintf("Cannot %s %s", strings.ToUpper(req.Method), req.URL))
 				return
-			}
-			var handler, i, isMiddleware = e.router.FindNext(index, request.Method, request.URL, request)
-			if i == -1 {
-				// done handling
-				if executedRoutes == 0 {
-					// 404
-					response.Error(404, fmt.Sprintf("Cannot %s %s", strings.ToUpper(req.Method), req.URL))
-					return
-				} else {
-					// should close connection
+			} else {
+				// should close connection
+				/*
 					if response.HasEnded() == false {
 						response.End()
 						return
-					}
-				}
-			} else {
-				if isMiddleware == false {
-					executedRoutes++
-				}
-				index = i + 1
-				handler(request, response, next)
-				if response.HasEnded() == false {
-					n(n)
-				}
+					}*/
+			}
+		} else {
+			if isMiddleware == false {
+				executedRoutes++
+			}
+			index = i + 1
+			handler(request, response, next)
+			if response.HasEnded() == false {
+				n(n)
 			}
 		}
-		next = func() {
-			_next(_next)
-		}
+	}
+	next = func() {
 		_next(_next)
 	}
+	_next(_next)
 }
 
 // Extension to provide Router.Get functionalities

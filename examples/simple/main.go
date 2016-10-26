@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/icebob/goexpress"
-	//"github.com/icebob/goexpress/middlewares"
+
+	"github.com/icebob/goexpress/middlewares"
 	"github.com/icebob/goexpress/request"
 	"github.com/icebob/goexpress/response"
 )
@@ -14,20 +16,14 @@ func main() {
 
 	var app = goexpress.Express()
 
-	//app.Use(middlewares.Log(middlewares.LOGTYPE_DEV))
+	app.Use(middlewares.Log(middlewares.LOGTYPE_TINY))
 
 	app.Get("/test", func(req *request.Request, res *response.Response, next func()) {
 		res.Send("Hello Test")
 	})
 
-	app.Get("/chunked", func(req *request.Request, res *response.Response, next func()) {
-		res.WriteChunk("Hello World\n")
-		//time.Sleep(5 * time.Second)
-		res.WriteChunk("Hello World2\n")
-	})
-
 	app.Get("/", func(req *request.Request, res *response.Response, next func()) {
-		//time.Sleep(200 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		res.Send("Hello World")
 	})
 

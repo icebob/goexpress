@@ -3,85 +3,64 @@
 package response
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
-	"fmt"
-	"log"
-	"net"
 	"net/http"
-
-	"github.com/icebob/goexpress/cookie"
-	"github.com/icebob/goexpress/header"
 )
 
 // Response Structure extends basic http.ResponseWriter interface
 // It encapsulates Header and Cookie class for direct access
 type Response struct {
-	response          http.ResponseWriter
-	Header            *header.Header
-	Cookie            *cookie.Cookie
-	Locals            map[string]interface{}
+	request  *http.Request
+	response http.ResponseWriter
+	header   http.Header
+	//Cookie            *cookie.Cookie
+	Context           context.Context
 	Props             map[string]interface{}
-	writer            *bufio.ReadWriter
-	connection        net.Conn
+	StatusCode        int
+	ContentLength     int
+	headerSent        bool
 	ended             bool
+	headerListeners   []func()
 	finishedListeners []func()
 }
 
 // Intialise the Response Struct, requires the Hijacked buffer,
 // connection and Response interface
-func (res *Response) Init(rs http.ResponseWriter, r *http.Request, w *bufio.ReadWriter, con net.Conn) *Response {
-	res.response = rs
-	res.writer = w
-	res.connection = con
-	res.Header = &header.Header{}
-	res.Header.Init(rs, r, w)
-	res.Cookie = &cookie.Cookie{}
-	res.Cookie.Init(res, r)
-	res.Locals = make(map[string]interface{})
+func (res *Response) Init(rsp http.ResponseWriter, req *http.Request) *Response {
+	res.request = req
+	res.response = rsp
+	res.header = rsp.Header()
+	res.Context = req.Context()
 	res.Props = make(map[string]interface{})
+	//res.Cookie = &cookie.Cookie{}
+	//res.Cookie.Init(res, req)
+	res.StatusCode = 0
+	res.ContentLength = 0
+	res.headerSent = false
 	res.ended = false
 
 	return res
 }
 
+/*
 // This function is for internal Use by Cookie Struct
 func (res *Response) AddCookie(key string, value string) {
 	res.Header.AppendCookie(key, value)
-}
-
-func (res *Response) AddFinishedListener(callback func()) {
-	res.finishedListeners = append(res.finishedListeners, callback)
-}
+}*/
 
 func (res *Response) AddHeaderListener(callback func()) {
-	res.Header.AddListener(callback)
+	res.headerListeners = append(res.headerListeners, callback)
 }
 
 func (res *Response) SetProp(key string, value interface{}) {
+	//res.request.WithContext(context.WithValue(res.request.Context(), key, value))
 	res.Props[key] = value
 }
 
 func (res *Response) GetProp(key string) interface{} {
+	//return res.Context.Value(key)
 	return res.Props[key]
-}
-
-// Writes a string content to the buffer and immediately flushes the same
-func (res *Response) WriteChunk(content string) *Response {
-	if res.Header.BasicSent() == false && res.Header.CanSendHeader() == true {
-		res.Header.TranferChunks()
-		res.Cookie.Finish()
-		if sent := res.Header.FlushHeaders(); sent == false {
-			log.Panic("Failed to push headers")
-		}
-	}
-	var bytes = []byte(content)
-	var chunkSize = fmt.Sprintf("%x", len(bytes))
-	res.writer.WriteString(chunkSize + "\r\n")
-	res.writer.Write(bytes)
-	res.writer.WriteString("\r\n")
-	res.writer.Flush()
-	return res
 }
 
 func (res *Response) Send(content string) *Response {
@@ -90,71 +69,41 @@ func (res *Response) Send(content string) *Response {
 }
 
 func (res *Response) sendContent(status int, content_type string, content []byte) {
-	if res.Header.BasicSent() == false {
-		res.Header.SetStatus(status)
-	}
-	if res.Header.CanSendHeader() == true {
-		res.Header.Set("Content-Type", content_type)
-		res.Header.SetLength(len(content))
-		res.Cookie.Finish()
-		if sent := res.Header.FlushHeaders(); sent == false {
-			log.Panic("Failed to write headers")
+	if !res.headerSent {
+		res.header["Content-Type"] = []string{content_type}
+		res.response.WriteHeader(status)
+		res.StatusCode = status
+
+		// Call headerListeners
+		for _, cb := range res.headerListeners {
+			cb()
 		}
+
+		// Clear listeners
+		res.headerListeners = res.headerListeners[:0]
+
+		res.headerSent = true
 	}
-	res.writer.Write(content)
-	res.writer.Writer.Flush()
-	res.End()
+	n, err := res.response.Write(content)
+	if err == nil {
+		res.ContentLength += n
+		res.ended = true
+	}
 }
 
-// Ends a response and drops the connection with client
-func (res *Response) End() {
-	if res.Header.IsTranferChunks() {
-		res.writer.WriteString("0")
-	}
-	res.writer.WriteString("\r\n\r\n")
-	res.writer.Flush()
-	err := res.connection.Close()
-	res.ended = true
-	if err != nil {
-		log.Panic("Couldn't close the connection, already lost?")
-	}
-
-	// Call finishedListeners
-	for _, cb := range res.finishedListeners {
-		cb()
-	}
-
-	// Clear listeners
-	res.finishedListeners = res.finishedListeners[:0]
+func (res *Response) HasEnded() bool {
+	return res.ended
 }
 
 // Redirects a request, takes the url as the Location
 func (res *Response) Redirect(url string) *Response {
-	res.Header.SetStatus(301)
-	res.Header.Set("Location", url)
-	res.Header.FlushHeaders()
-	res.End()
+	http.Redirect(res.response, res.request, url, 301)
 	return res
-}
-
-// An internal package use function to check the state of connection
-func (res *Response) HasEnded() bool {
-	return res.ended
 }
 
 // A helper for middlewares to get the original http.ResponseWriter
 func (res *Response) GetRaw() http.ResponseWriter {
 	return res.response
-}
-
-// A helper for middlewares to get the original net.Conn
-func (res *Response) GetConnection() net.Conn {
-	return res.connection
-}
-
-// A helper for middlewares to get the original Request buffer
-func (res *Response) GetBuffer() *bufio.ReadWriter {
-	return res.writer
 }
 
 // Send Error, takes HTTP status and a string content

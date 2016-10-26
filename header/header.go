@@ -57,10 +57,9 @@ var statusCodeMap = map[int]string{
 }
 
 // Initialise with response, request and io buffer
-func (h *Header) Init(response http.ResponseWriter, request *http.Request, writer *bufio.ReadWriter) *Header {
+func (h *Header) Init(response http.ResponseWriter, request *http.Request) *Header {
 	h.response = response
 	h.request = request
-	h.writer = writer
 	h.bodySent = false
 	h.basicSent = false
 	h.transferChunks = false

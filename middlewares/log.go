@@ -30,13 +30,12 @@ func Log(logType byte) router.Middleware {
 		res.SetProp("startTime", time.Now())
 		res.AddHeaderListener(func() {
 			elapsed := time.Since(res.GetProp("startTime").(time.Time))
-
 			switch logType {
 			case LOGTYPE_TINY:
-				log.Printf("%s %s %d %d - %s", strings.ToUpper(req.Method), req.URL, res.Header.StatusCode, res.Header.Length, elapsed)
+				log.Printf("%s %s %d %d - %s", strings.ToUpper(req.Method), req.URL, res.StatusCode, res.ContentLength, elapsed)
 			case LOGTYPE_DEV:
 				var color int
-				status := res.Header.StatusCode
+				status := res.StatusCode
 				switch {
 				case status >= 500:
 					color = 31
@@ -49,7 +48,7 @@ func Log(logType byte) router.Middleware {
 				default:
 					color = 0
 				}
-				log.Printf("\x1b[0m%s %s \x1b[%dm%d\x1b[0m %d - %s", strings.ToUpper(req.Method), req.URL, color, res.Header.StatusCode, res.Header.Length, elapsed)
+				log.Printf("\x1b[0m%s %s \x1b[%dm%d\x1b[0m %d - %s", strings.ToUpper(req.Method), req.URL, color, res.StatusCode, res.ContentLength, elapsed)
 			}
 		})
 
